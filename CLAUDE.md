@@ -16,10 +16,10 @@ npm run db:reset     # Reset SQLite database
 
 Run a single test file:
 ```bash
-npx vitest run src/components/__tests__/SomeComponent.test.tsx
+npx vitest run src/hooks/__tests__/use-auth.test.ts
 ```
 
-Environment: copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Without a key, the app uses a `MockLanguageModel` (safe for UI dev/testing).
+Environment: set `ANTHROPIC_API_KEY` in `.env`. Without a key, the app uses a `MockLanguageModel` (safe for UI dev/testing). `JWT_SECRET` defaults to a dev key; set it explicitly in production. All dev/build scripts require `node-compat.cjs` via `NODE_OPTIONS` to strip Node 25+ WebStorage globals that break SSR.
 
 ## Architecture
 
@@ -51,11 +51,15 @@ Environment: copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Without 
 
 Authenticated users get projects persisted in SQLite via Prisma. Each `Project` stores serialized `VirtualFileSystem` JSON and the full message history. Anonymous sessions are ephemeral (browser only).
 
-Always reference `prisma/schema.prisma` when needing to understand the structure of data stored in the database.
+Always reference `prisma/schema.prisma` when needing to understand the structure of data stored in the database. The Prisma client is generated to `src/generated/prisma` (non-standard path); import from there, not from `@prisma/client`.
 
 ### Auth
 
 JWT sessions in HTTP-only cookies. Server actions in `src/actions/` handle `signUp`/`signIn`/`signOut`. `src/middleware.ts` protects only `/api/projects` and `/api/filesystem` — `/api/chat` is intentionally public.
+
+### Testing
+
+Tests run in jsdom. `server-only` is stubbed via a vitest alias (`src/__mocks__/server-only.ts`) so server modules can be tested without Next.js. When writing tests for modules that import `server-only`, this alias is already wired up — no additional setup needed.
 
 ### Tool limitations
 
