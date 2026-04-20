@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run setup        # First-time setup: install deps + prisma generate + migrate
 npm run dev          # Dev server with Turbopack at localhost:3000
+npm run dev:daemon   # Dev server in background, logs to logs.txt
 npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Run Vitest tests
@@ -39,6 +40,8 @@ Environment: copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Without 
 - **`src/lib/provider.ts`** — Selects `claude-haiku-4-5` or `MockLanguageModel` based on whether `ANTHROPIC_API_KEY` is set.
 - **`src/lib/contexts/`** — `ChatProvider` and `FileSystemProvider` share state between the chat panel and the editor/preview panels.
 - **`src/lib/prompts/`** — System prompts that define Claude's code-gen persona and constraints (always use `/App.jsx` as entry, `@/` import alias, Tailwind CSS).
+- **`src/lib/transform/jsx-transformer.ts`** — Babel standalone transforms + import map builder. Resolves `@/` aliases, auto-fetches third-party packages from `esm.sh`, stubs missing local imports with placeholder modules, inlines CSS, and emits the full iframe HTML for `PreviewFrame`.
+- **`src/lib/anon-work-tracker.ts`** — Buffers anonymous session messages + VFS state in `sessionStorage` so they can be recovered and saved to a project after the user signs in.
 
 ### Layout
 
@@ -52,7 +55,11 @@ Always reference `prisma/schema.prisma` when needing to understand the structure
 
 ### Auth
 
-JWT sessions in HTTP-only cookies. Server actions in `src/actions/` handle `signUp`/`signIn`/`signOut`. `src/middleware.ts` protects routes.
+JWT sessions in HTTP-only cookies. Server actions in `src/actions/` handle `signUp`/`signIn`/`signOut`. `src/middleware.ts` protects only `/api/projects` and `/api/filesystem` — `/api/chat` is intentionally public.
+
+### Tool limitations
+
+`str_replace_editor` does not support `undo_edit`; the execute handler returns an error string rather than reverting. Claude is instructed to use `str_replace` to revert changes instead.
 
 ### Generated components
 
